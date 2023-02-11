@@ -1,0 +1,17 @@
+/target/classes
+/target/stale
+/classes
+/checkouts
+profiles.clj
+pom.xml
+pom.xml.asc
+*.class
+*-SNAPSHOT.jar
+/.lein-*
+/.nrepl-port
+/.prepl-port
+.hgignore
+.hg/
+audio/
+bounce/
+img/
