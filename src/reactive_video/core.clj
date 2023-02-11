@@ -7,12 +7,40 @@
     [fivetonine.collage.core :as collage]
     [fivetonine.collage.util :as collage.util]
     [image-resizer.pad :as image-resizer.pad]
-    [clojure.math :as math]))
+    [clojure.math :as math])
+  (:import [java.awt Graphics2D Color Font]
+           [java.awt.image BufferedImage]
+           [javax.imageio ImageIO]
+           [java.io File]))
 
 
 (defn log [& info]
   (apply println info)
   info)
+
+
+(defn titles [title artist album filename]
+  (let [path (str "./" filename ".png")
+        file (File. path)
+        width 1080
+        height 1080
+        image (BufferedImage. width height BufferedImage/TYPE_INT_ARGB)
+        graphics (.createGraphics image)
+        font-size 60
+        h1 (Font/createFont Font/TRUETYPE_FONT (File. "font/Arsenal-Bold.ttf"))
+        h1 (.deriveFont h1 60.0)
+        h2 (Font/createFont Font/TRUETYPE_FONT (File. "font/PTSans-Regular.ttf"))
+        h2 (.deriveFont h2 35.0)
+        padding-left 30
+        padding-top 10]
+    (.setColor graphics Color/WHITE)
+    (.setFont graphics h1)
+    (.drawString graphics title padding-left (+ padding-top 60))
+    (.setFont graphics h2)
+    (.drawString graphics (str artist " — " album) padding-left  (+ padding-top 115))
+    (ImageIO/write image "png" file)
+    path))
+
 
 (defn nearest-even
   [n]
@@ -20,21 +48,18 @@
     (if (even? c) c (dec c))))
 
 
-(defn -main [wav pic gain]
+(defn -main [wav pic gain title artist album]
   (let
     [table (lufs.file/load-table wav)
      l (log "loaded audio")
-     
      pic (collage.util/load-image pic)
-     pic (collage/crop pic 
-           0 0 
-           (nearest-even (.getWidth pic))
-           (nearest-even (.getHeight pic)))
+     pic (collage/resize pic 
+           :width 640 :height 640)
      l (log "loaded img")
      
+     text (titles title artist album "target/stale/titles")
+     
      gain (parse-double gain)
-     
-     
      
      height (.getHeight pic)
      
@@ -43,6 +68,7 @@
      left (first data)
      right (second data)
      mid (map + left right)
+     
      
      thresh (/ (lufs/lufs wav) -10)
      l (log "counted lufs")
@@ -74,7 +100,7 @@
          
          (let [x (first fv)
                charge 0.99
-               discharge 0.02]
+               discharge 0.06]
            (recur
              (if 
                (> x c)
@@ -91,19 +117,25 @@
     
     
     (doall
-      (map-indexed (fn [i g]
-                     (log "frame" i "/" len)
+      (map      (fn [g i]
+                     (log
+                       "frame" i "/" len ":"
+                       (format "%.2f"
+                         (* 100.0 (/ i len)))
+                       "%")
                      (as-> pic p
                       (collage/scale p (+ 1 (math/log10 (+ 1 g))))
-                      ((image-resizer.pad/pad-fn (- (nearest-even (* height (+ gain 1))) (.getHeight p))) p)
-                      (collage.util/save p (str "target/animation/" (format "%010d" i) ".png")))) for-video))))
+                      ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
+                      (collage.util/save p (str "target/animation/" (format "%010d" i) ".png")))) 
+        for-video
+        (range (count for-video))))))
 
 
 (comment
   
   
   
-  (-main "test.wav" "test.png" 1)
+  (-main "audio/test.wav" "img/test.png" "1.0" "Зе биг шорт" "Брискович" "Биты 2023")
   
   
   )
