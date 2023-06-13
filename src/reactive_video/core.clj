@@ -4,10 +4,18 @@
     [lufs-clj.file :as lufs.file]
     [lufs-clj.filter :as lufs.filter]
     [lufs-clj.core :as lufs]
+    
     [fivetonine.collage.core :as collage]
     [fivetonine.collage.util :as collage.util]
+    
     [image-resizer.pad :as image-resizer.pad]
-    [clojure.math :as math])
+    
+    [me.raynes.conch :as conch]
+    
+    [clojure.math :as math]
+    [clojure.edn :as edn]
+    
+    )
   (:import [java.awt Graphics2D Color Font]
            [java.awt.image BufferedImage]
            [javax.imageio ImageIO]
@@ -48,16 +56,20 @@
     (if (even? c) c (dec c))))
 
 
-(defn -main [wav pic gain title artist album]
+(defn -main [setup]
   (let
-    [table (lufs.file/load-table wav)
+    [
+     {:keys [pic wav gain]} (edn/read-string (slurp setup))
+     temp "temp.mp4"
+     fin (str "bounce/" (System/currentTimeMillis) ".mp4")
+     
+     
+     table (lufs.file/load-table wav)
      l (log "loaded audio")
      pic (collage.util/load-image pic)
      pic (collage/resize pic 
            :width 640 :height 640)
      l (log "loaded img")
-     
-     text (titles title artist album "target/stale/titles")
      
      gain (parse-double gain)
      
@@ -70,7 +82,7 @@
      mid (map + left right)
      
      
-     thresh (/ (lufs/lufs wav) -10)
+     thresh (/ (lufs/integrated wav) -10)
      l (log "counted lufs")
      
      mid (map 
@@ -113,29 +125,64 @@
          res))
      len (count for-video)
      l (log "applied vu")]
-  
     
     
-    (doall
-      (map      (fn [g i]
-                     (log
-                       "frame" i "/" len ":"
-                       (format "%.2f"
-                         (* 100.0 (/ i len)))
-                       "%")
-                     (as-> pic p
-                      (collage/scale p (+ 1 (math/log10 (+ 1 g))))
-                      ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
-                      (collage.util/save p (str "target/animation/" (format "%010d" i) ".png")))) 
-        for-video
-        (range (count for-video))))))
+
+    
+    
+    
+    (conch/with-programs [mkdir rm ffmpeg]
+      
+      (rm "-rf" "target/animation")
+      (rm "-f" temp)
+      
+      (mkdir "target/animation")
+      (mkdir "target/animation/auto")
+      
+      (doall
+        (map      (fn [g i]
+                       (log
+                         "frame" i "/" len ":"
+                         (format "%.2f"
+                           (* 100.0 (/ i len)))
+                         "%")
+                       (as-> pic p
+                        (collage/scale p (+ 1 (math/log10 (+ 1 g))))
+                        ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
+                        (collage.util/save p (str "target/animation/" (format "%010d" i) ".png")))) 
+          for-video
+          (vec (range (count for-video)))))
+      
+      (println "Generating temp video...")
+      
+      (ffmpeg 
+        "-y"
+        "-framerate" 25
+        "-pattern_type" "glob"
+        "-i" "target/animation/*.png"
+        "-i" wav
+        "-c:v" "libx264"
+        "-pix_fmt" "yuv420p"
+        "-b:a" "320k"
+        temp)
+      
+      (println "Generating final video...")
+      
+      (ffmpeg
+        "-y"
+        "-i" temp
+        "-vf" "pad=width=1920:height=1080:x=420:y=0:color=black"
+        "-b:a" "320k"
+        fin)
+      
+      (rm "-rf" "target/animation")
+      (rm temp)
+      (println fin)
+      (shutdown-agents))))
 
 
 (comment
   
+  (lufs.file/load-table "audio/test.wav")
   
-  
-  (-main "audio/test.wav" "img/test.png" "1.0" "Зе биг шорт" "Брискович" "Биты 2023")
-  
-  
-  )
+  (-main "setup.edn"))
