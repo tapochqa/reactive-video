@@ -5,3 +5,7 @@ pictures:
 
 run: pictures
 	open $(target)
+
+t-run:
+	lein install
+	lein run setup.edn

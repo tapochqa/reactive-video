@@ -15,6 +15,10 @@
     [clojure.math :as math]
     [clojure.edn :as edn]
     
+    [blurhash.core :as blurhash]
+    [blurhash.encode :as blurhash.encode]
+    [blurhash.decode :as blurhash.decode]
+    
     )
   (:import [java.awt Graphics2D Color Font]
            [java.awt.image BufferedImage]
@@ -59,16 +63,19 @@
 (defn -main [setup]
   (let
     [
-     {:keys [pic wav gain]} (edn/read-string (slurp setup))
+     {:keys [pic wav gain w h scale]} (edn/read-string (slurp setup))
+     pic-path pic
+     stamp (System/currentTimeMillis)
      temp "temp.mp4"
-     fin (str "bounce/" (System/currentTimeMillis) ".mp4")
+     background (str "bg-" stamp "." (-> pic-path (clojure.string/split #"\.") last))
+     fin (str "bounce/" stamp ".mp4")
      
      
      table (lufs.file/load-table wav)
      l (log "loaded audio")
      pic (collage.util/load-image pic)
      pic (collage/resize pic 
-           :width 640 :height 640)
+           :width (int (/ w scale)) :height (int (/ w scale)))
      l (log "loaded img")
      
      gain (parse-double gain)
@@ -124,7 +131,29 @@
          
          res))
      len (count for-video)
-     l (log "applied vu")]
+     l (log "applied vu")
+     
+     bg 
+     (-> pic-path
+      
+      blurhash/file->pixels
+      blurhash.encode/encode
+      (blurhash.decode/decode (int (/ w 70)) (int (/ h 70)))
+      (blurhash/pixels->file background))
+     
+     bg
+     (collage.util/save
+       (collage/resize 
+         (collage.util/load-image background) 
+         {:width w
+          :height h})
+       background)
+
+     l (log "generated bg")
+     
+     
+     
+     ]
     
     
 
@@ -148,12 +177,19 @@
                          "%")
                        (as-> pic p
                         (collage/scale p (+ 1 (math/log10 (+ 1 g))))
-                        ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
+                        (collage/paste
+                          
+                          (collage.util/load-image background)
+                          
+                          p 
+                          (int (math/floor (/ (- w (.getWidth p))   2)))
+                          (int (math/ceil  (/ (- h (.getHeight p))  2))))
+                        ; ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
                         (collage.util/save p (str "target/animation/" (format "%010d" i) ".png")))) 
           for-video
           (vec (range (count for-video)))))
       
-      (println "Generating temp video...")
+     (println "Generating final video...")
       
       (ffmpeg 
         "-y"
@@ -164,24 +200,35 @@
         "-c:v" "libx264"
         "-pix_fmt" "yuv420p"
         "-b:a" "320k"
-        temp)
-      
-      (println "Generating final video...")
-      
-      (ffmpeg
-        "-y"
-        "-i" temp
-        "-vf" "pad=width=1920:height=1080:x=420:y=0:color=black"
-        "-b:a" "320k"
         fin)
       
       (rm "-rf" "target/animation")
-      (rm temp)
+      (rm background)
       (println fin)
       (shutdown-agents))))
 
 
 (comment
+  
+  (def image
+    (blurhash/file->pixels "img/test.png"))
+  
+  
+  (-main "setup.edn")
+
+  (time (collage.util/load-image "img/blurred2-.png"))
+  
+  (-> "img/e49549f829.jpg"
+    
+    blurhash/file->pixels
+    blurhash.encode/encode
+    (blurhash.decode/decode 32 10)
+    (blurhash/pixels->file "img/blurred2-.png")
+    
+    )
+  
+  
+  
   
   (lufs.file/load-table "audio/test.wav")
   
