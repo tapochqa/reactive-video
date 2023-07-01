@@ -9,3 +9,7 @@ run: pictures
 t-run:
 	lein install
 	lein run test.edn
+
+install:
+	mkdir bounce
+	lein uberjar
