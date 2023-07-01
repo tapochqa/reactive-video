@@ -8,4 +8,4 @@ run: pictures
 
 t-run:
 	lein install
-	lein run setup.edn
+	lein run test.edn

@@ -1,5 +1,8 @@
-{:pic "/Users/m0x3mkx/Desktop/m1000x1000.jpeg"
- :wav "/Users/m0x3mkx/Desktop/Mugiwara Попыт.mp3"
+{:pic 
+ "/Users/m0x3mkx/Desktop/m1000x1000 (1).jpeg"
+ :wav 
+ "/Users/m0x3mkx/Desktop/Radreed Игра всерьез.mp3"
+ 
  :gain "0.2"
  :w 1920
  :h 1080

@@ -67,6 +67,7 @@
      pic-path pic
      stamp (System/currentTimeMillis)
      temp "temp.mp4"
+     cover-path (str stamp "." (-> pic-path (clojure.string/split #"\.") last))
      background (str "bg-" stamp "." (-> pic-path (clojure.string/split #"\.") last))
      fin (str "bounce/" stamp ".mp4")
      
@@ -76,6 +77,8 @@
      pic (collage.util/load-image pic)
      pic (collage/resize pic 
            :width (int (/ w scale)) :height (int (/ w scale)))
+     cover (collage.util/save pic cover-path)
+     
      l (log "loaded img")
      
      gain (parse-double gain)
@@ -134,7 +137,7 @@
      l (log "applied vu")
      
      bg 
-     (-> pic-path
+     (-> cover-path
       
       blurhash/file->pixels
       blurhash.encode/encode
@@ -189,7 +192,7 @@
           for-video
           (vec (range (count for-video)))))
       
-     (println "Generating final video...")
+     (println "Generating video...")
       
       (ffmpeg 
         "-y"
@@ -200,10 +203,23 @@
         "-c:v" "libx264"
         "-pix_fmt" "yuv420p"
         "-b:a" "320k"
+        temp)
+      
+      
+      (println "Offsetting audio...")
+      (ffmpeg
+        "-i" temp
+        "-itsoffset" 0.1
+        "-i" temp
+        "-map" "0:v"
+        "-map" "1:a"
+        "-c" "copy"
         fin)
       
       (rm "-rf" "target/animation")
+      (rm temp)
       (rm background)
+      (rm cover-path)
       (println fin)
       (shutdown-agents))))
 
