@@ -28,6 +28,15 @@
 
 
 
+(defn delete-directory-recursive
+  "Recursively delete a directory."
+  [^java.io.File file]
+
+  (when (.isDirectory file)
+    (run! delete-directory-recursive (.listFiles file)))
+
+  (io/delete-file file))
+
 
 
 (defn log [& info]
@@ -64,7 +73,7 @@
     (if (even? c) c (dec c))))
 
 
-(defn -main [setup]
+(defn -main [setup ffmpeg-path]
   (let
     [
      {:keys [pic wav gain w h scale]} (edn/read-string (slurp setup))
@@ -168,12 +177,12 @@
     
     
     
-    (conch/with-programs [mkdir rm ffmpeg]
+    (conch/let-programs [ffmpeg ffmpeg-path]
       
       
       (if-not
         (.exists (io/file "bounce/animation"))
-          (mkdir "bounce/animation"))
+          (.mkdir (java.io.File. "bounce/animation")))
       
       
       (doall
@@ -207,8 +216,8 @@
           for-video
           (vec (range (count for-video)))))
       
-     (rm background)
-     (rm cover-path)
+     (io/delete-file background)
+     (io/delete-file cover-path)
       
      (log "Generating video...")
       
@@ -223,7 +232,7 @@
         "-b:a" "320k"
         temp)
       
-      (rm "-rf" "bounce/animation")
+      (delete-directory-recursive (File. "bounce/animation"))
       
       
       (log "Offsetting audio...")
@@ -237,7 +246,7 @@
         fin)
       
       
-      (rm temp)
+      (io/delete-file temp)
 
       (log fin)
       (shutdown-agents))))

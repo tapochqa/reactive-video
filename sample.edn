@@ -1,0 +1,10 @@
+{:pic 
+ "/path/to/picture"
+ :wav 
+ "/path/to/audio"
+ 
+ :gain "0.2"
+ :w 1920
+ :h 1080
+ :scale 2.25
+ }

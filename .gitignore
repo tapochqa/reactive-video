@@ -1,6 +1,6 @@
 /target/classes
 /target/stale
-/target/*
+/target
 /classes
 /checkouts
 profiles.clj
