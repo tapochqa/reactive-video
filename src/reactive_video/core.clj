@@ -14,6 +14,7 @@
     
     [clojure.math :as math]
     [clojure.edn :as edn]
+    [clojure.java.io :as io]
     
     [blurhash.core :as blurhash]
     [blurhash.encode :as blurhash.encode]
@@ -24,6 +25,9 @@
            [java.awt.image BufferedImage]
            [javax.imageio ImageIO]
            [java.io File]))
+
+
+
 
 
 (defn log [& info]
@@ -66,11 +70,12 @@
      {:keys [pic wav gain w h scale]} (edn/read-string (slurp setup))
      pic-path pic
      stamp (System/currentTimeMillis)
-     temp "temp.mp4"
-     cover-path (str stamp "." (-> pic-path (clojure.string/split #"\.") last))
-     background (str "bg-" stamp "." (-> pic-path (clojure.string/split #"\.") last))
+     temp "bounce/temp.mp4"
+     cover-path (str "bounce/" stamp "." (-> pic-path (clojure.string/split #"\.") last))
+     background (str "bounce/bg-" stamp "." (-> pic-path (clojure.string/split #"\.") last))
      fin (str "bounce/" stamp ".mp4")
      
+     frames-done! (atom 0.0)
      
      table (lufs.file/load-table wav)
      l (log "loaded audio")
@@ -106,7 +111,7 @@
             :Q 0.3
             :fc 300.0
             :rate sr})
-     l (log "applied filter")
+     l (log "applied filter 1")
      
      n (/ sr 25)
      for-video (partition (long n) mid)
@@ -165,48 +170,63 @@
     
     (conch/with-programs [mkdir rm ffmpeg]
       
-      (rm "-rf" "target/animation")
-      (rm "-f" temp)
       
-      (mkdir "target/animation")
-      (mkdir "target/animation/auto")
+      (if-not
+        (.exists (io/file "bounce/animation"))
+          (mkdir "bounce/animation"))
+      
       
       (doall
-        (map      (fn [g i]
-                       (log
-                         "frame" i "/" len ":"
-                         (format "%.2f"
-                           (* 100.0 (/ i len)))
-                         "%")
-                       (as-> pic p
-                        (collage/scale p (+ 1 (math/log10 (+ 1 g))))
-                        (collage/paste
-                          
-                          (collage.util/load-image background)
-                          
-                          p 
-                          (int (math/floor (/ (- w (.getWidth p))   2)))
-                          (int (math/ceil  (/ (- h (.getHeight p))  2))))
-                        ; ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
-                        (collage.util/save p (str "target/animation/" (format "%010d" i) ".png")))) 
+        (pmap      (fn [g i]
+                     
+                     (let [path (str "bounce/animation/" (format "%010d" i) ".png")]
+                     
+                       (if (.exists (io/file path))
+                         
+                         (log i "✔ ")
+                         
+                         (do 
+                           
+                           (reset! frames-done! (inc @frames-done!))
+                           (log
+                             " "
+                             (format "%.2f"
+                               (* 100.0 (/ @frames-done! len)))
+                             "% ")
+                           (as-> pic p
+                            (collage/scale p (+ 1 (math/log10 (+ 1 g))))
+                            (collage/paste
+                              
+                              (collage.util/load-image background)
+                              
+                              p 
+                              (int (math/floor (/ (- w (.getWidth p))   2)))
+                              (int (math/ceil  (/ (- h (.getHeight p))  2))))
+                            ; ((image-resizer.pad/pad-fn (/ (- 1080 (.getHeight p)) 2)) p)
+                            (collage.util/save p path))))))
           for-video
           (vec (range (count for-video)))))
       
-     (println "Generating video...")
+     (rm background)
+     (rm cover-path)
+      
+     (log "Generating video...")
       
       (ffmpeg 
         "-y"
         "-framerate" 25
         "-pattern_type" "glob"
-        "-i" "target/animation/*.png"
+        "-i" "bounce/animation/*.png"
         "-i" wav
         "-c:v" "libx264"
         "-pix_fmt" "yuv420p"
         "-b:a" "320k"
         temp)
       
+      (rm "-rf" "bounce/animation")
       
-      (println "Offsetting audio...")
+      
+      (log "Offsetting audio...")
       (ffmpeg
         "-i" temp
         "-itsoffset" 0.1
@@ -216,11 +236,10 @@
         "-c" "copy"
         fin)
       
-      (rm "-rf" "target/animation")
+      
       (rm temp)
-      (rm background)
-      (rm cover-path)
-      (println fin)
+
+      (log fin)
       (shutdown-agents))))
 
 
@@ -243,9 +262,7 @@
     
     )
   
-  
-  
-  
+  (.exists (io/file "font"))
   (lufs.file/load-table "audio/test.wav")
   
   (-main "setup.edn"))
