@@ -1,5 +1,3 @@
-SHELL=zsh
-
 pictures:
 	java -jar target/reactive-video.jar setup.edn
 
