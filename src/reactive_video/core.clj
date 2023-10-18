@@ -166,7 +166,7 @@
              {:f-type :high-pass
               :G 0.0
               :Q 0.9
-              :fc 100.0
+              :fc 200.0
               :rate sr})
        l (log "applied filter hp")
 
