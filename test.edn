@@ -4,8 +4,8 @@
  "audio/test.wav"
  
  :gain "0.2"
- :w 1920
- :h 1080
- :scale 2.25
+ :w 1080
+ :h 1920
+ :scale 1.1
  }
 
