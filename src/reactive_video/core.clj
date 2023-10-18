@@ -160,7 +160,15 @@
               :Q 0.3
               :fc 300.0
               :rate sr})
-       l (log "applied filter 1")
+       l (log "applied filter lp")
+       
+       mid (lufs.filter/apply-filter mid (count mid)
+             {:f-type :high-pass
+              :G 0.0
+              :Q 0.9
+              :fc 100.0
+              :rate sr})
+       l (log "applied filter hp")
 
        n (/ sr 25)
        for-video (partition (long n) mid)
@@ -226,7 +234,7 @@
 
 
         (doall
-          (virtuoso/pmap      (fn [g i]
+          (virtuoso/pmap!      (fn [g i]
 
                        (let [path (str "bounce/animation/" (format "%010d" i) ".png")]
 
