@@ -157,18 +157,23 @@
        mid (lufs.filter/apply-filter mid (count mid)
              {:f-type :low-pass
               :G 0.0
-              :Q 0.3
+              :Q 1.0
+              :fc 300.0
+              :rate sr})
+       mid (lufs.filter/apply-filter mid (count mid)
+             {:f-type :low-pass
+              :G 0.0
+              :Q 1.0
+              :fc 300.0
+              :rate sr})
+       mid (lufs.filter/apply-filter mid (count mid)
+             {:f-type :low-pass
+              :G 0.0
+              :Q 1.0
               :fc 300.0
               :rate sr})
        l (log "applied filter lp")
        
-       mid (lufs.filter/apply-filter mid (count mid)
-             {:f-type :high-pass
-              :G 0.0
-              :Q 0.9
-              :fc 200.0
-              :rate sr})
-       l (log "applied filter hp")
 
        n (/ sr 25)
        for-video (partition (long n) mid)
