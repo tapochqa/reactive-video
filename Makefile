@@ -3,7 +3,7 @@ JAR = target/${NAME}.jar
 RELEASE = target/${NAME}
 
 pictures:
-	java -jar target/reactive-video.jar setup.edn
+	java -jar target/reactive-video.jar setup.edn "ffmpeg"
 
 run: pictures
 	open $(target)

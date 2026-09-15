@@ -1,11 +1,11 @@
 {:pic 
- "img/test.png"
+ "img/test2.jpg"
  :wav 
- "audio/test.wav"
+ "audio/test2.mp3.wav"
  
- :gain "0.2"
+ :gain "0.005"
  :w 1080
  :h 1920
- :scale 1.1
+ :scale 1.7
  }
 
