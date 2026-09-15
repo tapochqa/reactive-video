@@ -11,8 +11,10 @@
                  [me.raynes/conch           "0.8.0"]
                  [tvirolai/blurhash         "0.0.8"]
                  [link.lmnd/yandex-music    "0.1.2"]
-                 [com.github.igrishaev/virtuoso "0.1.0"]
-                 [cheshire "6.1.0"]
+                 [com.github.igrishaev/virtuoso 
+                                            "0.1.0"]
+                 [cheshire                  "6.1.0"]
+                 [com.hypirion/clj-xchart   "0.2.0"]
 
 ]
   

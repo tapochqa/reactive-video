@@ -26,8 +26,10 @@
 
     [yandex-music.core :as yandex-music]
 
-    [virtuoso.core :as virtuoso])
-  
+    [virtuoso.core :as virtuoso]
+   
+    [com.hypirion.clj-xchart :as xchart])
+   
   (:import [java.awt Graphics2D Color Font RenderingHints]
            [java.awt.image BufferedImage]
            [javax.imageio ImageIO]
@@ -54,9 +56,31 @@
 (defn repeat-each [n coll]
   (vec (mapcat (fn [x] (repeat n x)) coll)))
 
+
+(defn vector->xy
+  [v title]
+  (let [y
+        v
+      
+        x
+        (range (count v))
+        
+        chart (xchart/xy-chart
+            {title
+              {:x x
+               :y y
+               :style {:marker-type :none}}}
+             {:title title
+              :render-style :area
+              :x-axis {:title "Time"}
+              :y-axis {:title "Energy"}})]
+    (xchart/view chart)))
+
+
 ;; ---------------------------------------------------------------------------
 ;; title card
 ;; ---------------------------------------------------------------------------
+
 
 (defn titles [title artist album filename]
   (let [path (str "./" filename ".png")
@@ -187,11 +211,44 @@
          
          
          energy
-         (map (fn [b d] (+ (/ 4.0 (- 1.0 b)) (/ 10.0 (- 1.0 d)))) 
+         (map (fn [b d] (+ (* b b b b b) (* d d d d d)))
            bass-over-table
            drums-over-table)
          
-
+         
+         thresh (/ (lufs/integrated wav) -30)
+         _ (log "measured lufs")
+;
+;         energy 
+;             (map
+;               (fn
+;                 [s]
+;                 (if (> s thresh) s 0.0))
+;               energy)
+;         
+;         
+;         for-video
+;         (loop
+;             [c 0
+;              fv energy
+;              res []]
+;             (if fv
+;
+;               (let [x (first fv)
+;                     charge 0.4
+;                     discharge (/ (-> mu :rhythm :beatsPerMinute) 100000.0)]
+;                 (recur
+;                   (if
+;                     (> x c)
+;                     (+ (* c (- 1 charge)) (* x charge))
+;                     (* c (- 1 discharge)))
+;
+;                   (next fv)
+;                   (conj res c)))
+;               res))
+;         
+;         
+         
          pic (collage.util/load-image pic)
          pic (collage/resize pic :width (int (/ w scale)) :height (int (/ w scale)))
          _ (collage.util/save pic cover-path)
@@ -209,6 +266,8 @@
          
          len (count for-video)
          _ (log "applied vu")
+         
+         _ (vector->xy energy "fv")
 
          bg (-> cover-path
                 blurhash/file->pixels
